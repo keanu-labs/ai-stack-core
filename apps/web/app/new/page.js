@@ -10,22 +10,15 @@ export default function NewEntry() {
 
   async function submit() {
     setMsg("Saving...");
-   const { data: userData } = await supabase.auth.getUser();
-const user = userData?.user;
 
-if (!user) {
-  setMsg("You must be logged in ❌");
-  return;
-}
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      tags: []
+      // user_id omitted on purpose for temporary anon dev inserts
+    };
 
-const { error } = await supabase.from("entries").insert([
-  {
-    title: title.trim(),
-    body: body.trim(),
-    tags: [],
-    user_id: user.id
-  }
-]);
+    const { error } = await supabase.from("entries").insert([payload]);
 
     if (error) setMsg(`Error ❌: ${error.message}`);
     else {
@@ -38,8 +31,8 @@ const { error } = await supabase.from("entries").insert([
     <main style={{ padding: 24, fontFamily: "system-ui", maxWidth: 700 }}>
       <h1>New Chronicle Entry</h1>
 
-      <p style={{ opacity: 0.8 }}>
-        Only logged-in users can create entries.
+      <p style={{ opacity: 0.75 }}>
+        TEMP DEV MODE: anon inserts enabled (we will remove later).
       </p>
 
       <input
