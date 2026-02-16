@@ -8,7 +8,7 @@ export default function Home() {
 
   useEffect(() => {
     async function run() {
-      // We purposely query a table that doesn't exist.
+      // We purposely query a table that doesn't exist.s
       // If env vars are correct, you'll get a "table not found" style error,
       // which still proves the connection works.
       const { error } = await supabase.from("_connection_test").select("*").limit(1);
