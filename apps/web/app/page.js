@@ -15,10 +15,10 @@ export default function Home() {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (error) {
-        setStatus("Error loading entries ❌");
-        return;
-      }
+    if (error) {
+  setStatus(`Error loading entries ❌: ${error.message}`);
+  return;
+}
 
       setEntries(data || []);
       setStatus("");
