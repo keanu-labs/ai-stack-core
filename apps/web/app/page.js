@@ -9,19 +9,36 @@ export default function Home() {
 
   useEffect(() => {
     async function run() {
-      const { data, error } = await supabase
-        .from("entries")
-        .select("id, created_at, title, body, tags")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (error) {
-  setStatus(`Error loading entries ❌: ${error.message}`);
-  return;
-}
+      if (!url) {
+        setStatus("Missing NEXT_PUBLIC_SUPABASE_URL ❌");
+        return;
+      }
 
-      setEntries(data || []);
-      setStatus("");
+      if (!key) {
+        setStatus("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY ❌");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("entries")
+          .select("id, created_at, title, body, tags")
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (error) {
+          setStatus(`Supabase error ❌: ${error.message}`);
+          return;
+        }
+
+        setEntries(data || []);
+        setStatus("");
+      } catch (e) {
+        setStatus(`Network error ❌: ${e.message}`);
+      }
     }
 
     run();
@@ -30,6 +47,7 @@ export default function Home() {
   return (
     <main style={{ padding: 24, fontFamily: "system-ui", maxWidth: 900 }}>
       <h1>ai-stack-core</h1>
+
       {status && <p>{status}</p>}
 
       {entries.map((e) => (
