@@ -9,17 +9,19 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState(null);
 
   async function loadUser() {
-    const { data } = await supabase.auth.getUser();
-    setUserEmail(data?.user?.email ?? null);
-  }
+   const { data: userData } = await supabase.auth.getUser();
+const user = userData?.user;
 
-  async function loadEntries() {
-    setStatus("Loading entries...");
-    const { data, error } = await supabase
-      .from("entries")
-      .select("id, created_at, title, body, tags")
-      .order("created_at", { ascending: false })
-      .limit(10);
+if (!user) {
+  setStatus("Login required.");
+  return;
+}
+
+const { data, error } = await supabase
+  .from("entries")
+  .select("*")
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false });
 
     if (error) {
       setStatus(`Supabase error ❌: ${error.message}`);
