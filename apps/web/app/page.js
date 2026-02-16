@@ -14,18 +14,12 @@ export default function Home() {
     return data?.user ?? null;
   }
 
-  async function loadEntries(currentUser) {
-    if (!currentUser) {
-      setEntries([]);
-      setStatus("Login required. Go to /login");
-      return;
-    }
-
+  async function loadEntries() {
     setStatus("Loading entries...");
+
     const { data, error } = await supabase
       .from("entries")
       .select("id, created_at, title, body, tags, user_id")
-      .eq("user_id", currentUser.id)
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -41,25 +35,23 @@ export default function Home() {
   async function logout() {
     await supabase.auth.signOut();
     setUser(null);
-    setEntries([]);
-    setStatus("Logged out.");
   }
 
   useEffect(() => {
     let alive = true;
 
     async function boot() {
-      const u = await loadUser();
+      await loadUser();
       if (!alive) return;
-      await loadEntries(u);
+      await loadEntries();
     }
 
     boot();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async () => {
-      const u = await loadUser();
+      await loadUser();
       if (!alive) return;
-      await loadEntries(u);
+      await loadEntries();
     });
 
     return () => {
@@ -73,6 +65,10 @@ export default function Home() {
       <h1>ai-stack-core</h1>
 
       <div style={{ marginBottom: 16, opacity: 0.85 }}>
+        <div style={{ marginBottom: 6 }}>
+          <b>DEV MODE:</b> anon inserts + public feed enabled temporarily.
+        </div>
+
         {user?.email ? (
           <>
             Logged in as: <b>{user.email}</b>{" "}
@@ -86,8 +82,11 @@ export default function Home() {
         ) : (
           <>
             Not logged in.{" "}
-            <a href="/login" style={{ marginLeft: 8 }}>
-              Go to login
+            <a href="/new" style={{ marginLeft: 8 }}>
+              New entry
+            </a>{" "}
+            <a href="/login" style={{ marginLeft: 12 }}>
+              Login
             </a>
           </>
         )}
@@ -108,6 +107,7 @@ export default function Home() {
           <h2 style={{ margin: 0 }}>{e.title}</h2>
           <p style={{ opacity: 0.7, marginTop: 6, marginBottom: 12 }}>
             {new Date(e.created_at).toLocaleString()}
+            {e.user_id ? ` · user: ${String(e.user_id).slice(0, 8)}…` : ` · user: anon`}
           </p>
           <p style={{ whiteSpace: "pre-wrap" }}>{e.body}</p>
           {e.tags?.length ? (
