@@ -10,15 +10,22 @@ export default function NewEntry() {
 
   async function submit() {
     setMsg("Saving...");
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      setMsg("You must be logged in ❌ (go to /login)");
-      return;
-    }
+   const { data: userData } = await supabase.auth.getUser();
+const user = userData?.user;
 
-    const { error } = await supabase.from("entries").insert([
-      { title: title.trim(), body: body.trim(), tags: [] }
-    ]);
+if (!user) {
+  setMsg("You must be logged in ❌");
+  return;
+}
+
+const { error } = await supabase.from("entries").insert([
+  {
+    title: title.trim(),
+    body: body.trim(),
+    tags: [],
+    user_id: user.id
+  }
+]);
 
     if (error) setMsg(`Error ❌: ${error.message}`);
     else {
