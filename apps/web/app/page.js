@@ -6,22 +6,28 @@ import { supabase } from "../lib/supabase";
 export default function Home() {
   const [status, setStatus] = useState("Loading...");
   const [entries, setEntries] = useState([]);
-  const [userEmail, setUserEmail] = useState(null);
+  const [user, setUser] = useState(null);
 
   async function loadUser() {
-   const { data: userData } = await supabase.auth.getUser();
-const user = userData?.user;
+    const { data } = await supabase.auth.getUser();
+    setUser(data?.user ?? null);
+    return data?.user ?? null;
+  }
 
-if (!user) {
-  setStatus("Login required.");
-  return;
-}
+  async function loadEntries(currentUser) {
+    if (!currentUser) {
+      setEntries([]);
+      setStatus("Login required. Go to /login");
+      return;
+    }
 
-const { data, error } = await supabase
-  .from("entries")
-  .select("*")
-  .eq("user_id", user.id)
-  .order("created_at", { ascending: false });
+    setStatus("Loading entries...");
+    const { data, error } = await supabase
+      .from("entries")
+      .select("id, created_at, title, body, tags, user_id")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
 
     if (error) {
       setStatus(`Supabase error ❌: ${error.message}`);
@@ -34,18 +40,32 @@ const { data, error } = await supabase
 
   async function logout() {
     await supabase.auth.signOut();
-    await loadUser();
+    setUser(null);
+    setEntries([]);
+    setStatus("Logged out.");
   }
 
   useEffect(() => {
-    loadUser();
-    loadEntries();
+    let alive = true;
 
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
+    async function boot() {
+      const u = await loadUser();
+      if (!alive) return;
+      await loadEntries(u);
+    }
+
+    boot();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
+      const u = await loadUser();
+      if (!alive) return;
+      await loadEntries(u);
     });
 
-    return () => sub?.subscription?.unsubscribe?.();
+    return () => {
+      alive = false;
+      sub?.subscription?.unsubscribe?.();
+    };
   }, []);
 
   return (
@@ -53,12 +73,15 @@ const { data, error } = await supabase
       <h1>ai-stack-core</h1>
 
       <div style={{ marginBottom: 16, opacity: 0.85 }}>
-        {userEmail ? (
+        {user?.email ? (
           <>
-            Logged in as: <b>{userEmail}</b>{" "}
+            Logged in as: <b>{user.email}</b>{" "}
             <button onClick={logout} style={{ marginLeft: 12 }}>
               Log out
-            </button>
+            </button>{" "}
+            <a href="/new" style={{ marginLeft: 12 }}>
+              New entry
+            </a>
           </>
         ) : (
           <>
