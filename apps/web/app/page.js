@@ -4,49 +4,69 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function Home() {
-  const [status, setStatus] = useState("Loading entries...");
+  const [status, setStatus] = useState("Loading...");
   const [entries, setEntries] = useState([]);
+  const [userEmail, setUserEmail] = useState(null);
 
-  useEffect(() => {
-    async function run() {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  async function loadUser() {
+    const { data } = await supabase.auth.getUser();
+    setUserEmail(data?.user?.email ?? null);
+  }
 
-      if (!url) {
-        setStatus("Missing NEXT_PUBLIC_SUPABASE_URL ❌");
-        return;
-      }
+  async function loadEntries() {
+    setStatus("Loading entries...");
+    const { data, error } = await supabase
+      .from("entries")
+      .select("id, created_at, title, body, tags")
+      .order("created_at", { ascending: false })
+      .limit(10);
 
-      if (!key) {
-        setStatus("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY ❌");
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from("entries")
-          .select("id, created_at, title, body, tags")
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (error) {
-          setStatus(`Supabase error ❌: ${error.message}`);
-          return;
-        }
-
-        setEntries(data || []);
-        setStatus("");
-      } catch (e) {
-        setStatus(`Network error ❌: ${e.message}`);
-      }
+    if (error) {
+      setStatus(`Supabase error ❌: ${error.message}`);
+      return;
     }
 
-    run();
+    setEntries(data || []);
+    setStatus("");
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    await loadUser();
+  }
+
+  useEffect(() => {
+    loadUser();
+    loadEntries();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      loadUser();
+    });
+
+    return () => sub?.subscription?.unsubscribe?.();
   }, []);
 
   return (
     <main style={{ padding: 24, fontFamily: "system-ui", maxWidth: 900 }}>
       <h1>ai-stack-core</h1>
+
+      <div style={{ marginBottom: 16, opacity: 0.85 }}>
+        {userEmail ? (
+          <>
+            Logged in as: <b>{userEmail}</b>{" "}
+            <button onClick={logout} style={{ marginLeft: 12 }}>
+              Log out
+            </button>
+          </>
+        ) : (
+          <>
+            Not logged in.{" "}
+            <a href="/login" style={{ marginLeft: 8 }}>
+              Go to login
+            </a>
+          </>
+        )}
+      </div>
 
       {status && <p>{status}</p>}
 
